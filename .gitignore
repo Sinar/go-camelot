@@ -10,3 +10,12 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Ignore binary
+go-camelot
+
+# Ignore direnv files
+.envrc*
+
+# Ignore Golang files
+.idea
