@@ -19,3 +19,7 @@ go-camelot
 
 # Ignore Golang files
 .idea
+
+# Ignore testdata for now
+testdata
+

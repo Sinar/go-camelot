@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"os"
 
+	"github.com/davecgh/go-spew/spew"
 	"gocv.io/x/gocv"
 )
 
 func main() {
 	fmt.Println("Welcome to auto detect of tables in image!!")
-	// runExample()
+	runExample()
 }
 
 // Example from: https://raw.githubusercontent.com/hybridgroup/gocv/master/cmd/facedetect/main.go
@@ -29,70 +31,35 @@ func main() {
 // +build example
 
 func runExample() {
-	if len(os.Args) < 3 {
-		fmt.Println("How to run:\n\tfacedetect [camera ID] [classifier XML file]")
-		return
+	filename := os.Args[1]
+
+	mat := gocv.IMRead(filename, gocv.IMReadColor)
+
+	matCanny := gocv.NewMat()
+	matLines := gocv.NewMat()
+
+	window := gocv.NewWindow("detected lines")
+
+	gocv.Canny(mat, &matCanny, 50, 200)
+	gocv.HoughLinesP(matCanny, &matLines, 1, math.Pi/180, 80)
+
+	fmt.Println(matLines.Cols())
+	fmt.Println(matLines.Rows())
+	for i := 0; i < matLines.Rows(); i++ {
+
+		fmt.Println("ROW: ", i)
+		// spew.Dump(matLines.GetVeciAt(i, 0))
+
+		pt1 := image.Pt(int(matLines.GetVeciAt(i, 0)[0]), int(matLines.GetVeciAt(i, 0)[1]))
+		pt2 := image.Pt(int(matLines.GetVeciAt(i, 0)[2]), int(matLines.GetVeciAt(i, 0)[3]))
+		spew.Dump(pt1)
+		spew.Dump(pt2)
+		gocv.Line(&mat, pt1, pt2, color.RGBA{0, 255, 0, 50}, 10)
 	}
 
-	// parse args
-	deviceID := os.Args[1]
-	xmlFile := os.Args[2]
-
-	// open webcam
-	webcam, err := gocv.OpenVideoCapture(deviceID)
-	if err != nil {
-		fmt.Printf("error opening video capture device: %v\n", deviceID)
-		return
-	}
-	defer webcam.Close()
-
-	// open display window
-	window := gocv.NewWindow("Face Detect")
-	defer window.Close()
-
-	// prepare image matrix
-	img := gocv.NewMat()
-	defer img.Close()
-
-	// color for the rect when faces detected
-	blue := color.RGBA{0, 0, 255, 0}
-
-	// load classifier to recognize faces
-	classifier := gocv.NewCascadeClassifier()
-	defer classifier.Close()
-
-	if !classifier.Load(xmlFile) {
-		fmt.Printf("Error reading cascade file: %v\n", xmlFile)
-		return
-	}
-
-	fmt.Printf("Start reading device: %v\n", deviceID)
 	for {
-		if ok := webcam.Read(&img); !ok {
-			fmt.Printf("Device closed: %v\n", deviceID)
-			return
-		}
-		if img.Empty() {
-			continue
-		}
-
-		// detect faces
-		rects := classifier.DetectMultiScale(img)
-		fmt.Printf("found %d faces\n", len(rects))
-
-		// draw a rectangle around each face on the original image,
-		// along with text identifing as "Human"
-		for _, r := range rects {
-			gocv.Rectangle(&img, r, blue, 3)
-
-			size := gocv.GetTextSize("Human", gocv.FontHersheyPlain, 1.2, 2)
-			pt := image.Pt(r.Min.X+(r.Min.X/2)-(size.X/2), r.Min.Y-2)
-			gocv.PutText(&img, "Human", pt, gocv.FontHersheyPlain, 1.2, blue, 2)
-		}
-
-		// show the image in the window, and wait 1 millisecond
-		window.IMShow(img)
-		if window.WaitKey(1) >= 0 {
+		window.IMShow(mat)
+		if window.WaitKey(10) >= 0 {
 			break
 		}
 	}
