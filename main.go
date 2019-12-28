@@ -2,65 +2,48 @@ package main
 
 import (
 	"fmt"
-	"image"
-	"image/color"
-	"math"
-	"os"
 
-	"github.com/davecgh/go-spew/spew"
-	"gocv.io/x/gocv"
+	"github.com/ledongthuc/pdf"
 )
 
 func main() {
 	fmt.Println("Welcome to auto detect of tables in image!!")
-	runExample()
+	getTextByRow()
 }
 
-// Example from: https://raw.githubusercontent.com/hybridgroup/gocv/master/cmd/facedetect/main.go
-// What it does:
-//
-// This example uses the CascadeClassifier class to detect faces,
-// and draw a rectangle around each of them, before displaying them within a Window.
-//
-// How to run:
-//
-// facedetect [camera ID] [classifier XML file]
-//
-// 		go run ./cmd/facedetect/main.go 0 data/haarcascade_frontalface_default.xml
-//
-// +build example
-
-func runExample() {
-	filename := os.Args[1]
-
-	mat := gocv.IMRead(filename, gocv.IMReadColor)
-
-	matCanny := gocv.NewMat()
-	matLines := gocv.NewMat()
-
-	window := gocv.NewWindow("detected lines")
-
-	gocv.Canny(mat, &matCanny, 50, 200)
-	gocv.HoughLinesP(matCanny, &matLines, 1, math.Pi/180, 80)
-
-	fmt.Println(matLines.Cols())
-	fmt.Println(matLines.Rows())
-	for i := 0; i < matLines.Rows(); i++ {
-
-		fmt.Println("ROW: ", i)
-		// spew.Dump(matLines.GetVeciAt(i, 0))
-
-		pt1 := image.Pt(int(matLines.GetVeciAt(i, 0)[0]), int(matLines.GetVeciAt(i, 0)[1]))
-		pt2 := image.Pt(int(matLines.GetVeciAt(i, 0)[2]), int(matLines.GetVeciAt(i, 0)[3]))
-		spew.Dump(pt1)
-		spew.Dump(pt2)
-		gocv.Line(&mat, pt1, pt2, color.RGBA{0, 255, 0, 50}, 10)
+func getTextByRow() {
+	sourcePDFPath := "./raw/Jawapan Bertulis dikemaskini pada 18 Sept 2019.pdf"
+	output, err := readPdf(sourcePDFPath)
+	if err != nil {
+		panic(err)
 	}
 
-	for {
-		window.IMShow(mat)
-		if window.WaitKey(10) >= 0 {
-			break
+	fmt.Println(output)
+}
+
+func readPdf(path string) (string, error) {
+	f, r, err := pdf.Open(path)
+	defer func() {
+		_ = f.Close()
+	}()
+	if err != nil {
+		return "", err
+	}
+	totalPage := r.NumPage()
+
+	for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+		p := r.Page(pageIndex)
+		if p.V.IsNull() {
+			continue
+		}
+
+		rows, _ := p.GetTextByRow()
+		for _, row := range rows {
+			println(">>>> row: ", row.Position)
+			for _, word := range row.Content {
+				fmt.Println(word.S)
+			}
 		}
 	}
+	return "", nil
 }
