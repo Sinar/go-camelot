@@ -4,5 +4,8 @@ package camelot
 // with a clustering mechanism ..
 func getMetadata(pdfSourcePath string) {
 
-	NewPDFDocument(pdfSourcePath, nil)
+	NewPDFDocument(pdfSourcePath, &ExtractPDFOptions{
+		StartPage: 2,
+		NumPages:  1,
+	})
 }

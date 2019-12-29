@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
-	"github.com/sanity-io/litter"
 )
 
 type PDFPage struct {
@@ -51,6 +50,10 @@ func NewPDFDocument(pdfPath string, options *ExtractPDFOptions) (*PDFDocument, e
 			totalPage = options.NumPages
 		}
 	}
+
+	// DEBUG bug in optional start/endpage ..
+	//fmt.Println("START: ", startPage, " TOTAL: ", totalPage)
+
 	var pdfPages []PDFPage
 	// Init it and fill it with the extracted info  earlier ..
 	pdfDoc := PDFDocument{
@@ -59,7 +62,8 @@ func NewPDFDocument(pdfPath string, options *ExtractPDFOptions) (*PDFDocument, e
 		SourcePath: pdfPath,
 	}
 
-	for pageIndex := startPage; pageIndex <= totalPage; pageIndex++ {
+	// If have startPage offset; use that as the start + totalPage
+	for pageIndex := startPage; pageIndex < (startPage + totalPage); pageIndex++ {
 		p := r.Page(pageIndex)
 		if p.V.IsNull() {
 			continue
@@ -83,6 +87,8 @@ func NewPDFDocument(pdfPath string, options *ExtractPDFOptions) (*PDFDocument, e
 		// processStyleChanges ..
 		//extractTxtSameStyles()
 		// DEBUG
+		//litter.Dump(p.Content().Text)
+		extractTxtSameLineWordPosition(p.Content().Text)
 		//fmt.Println("LEN: ", p.V.Len())
 		//fmt.Println("KEYS", p.V.Keys())
 		//fmt.Println("KIND", p.V.Kind())
@@ -92,12 +98,12 @@ func NewPDFDocument(pdfPath string, options *ExtractPDFOptions) (*PDFDocument, e
 		// Top 10 lines for this page by line analysis
 		//fmt.Println("== START ANALYZE by LINE")
 		//newPageProcessed.PDFTxtSameLines = make([]string, 0, 20)
-		extractTxtSameLine(&newPageProcessed.PDFTxtSameLines, p.Content().Text)
+		//extractTxtSameLine(&newPageProcessed.PDFTxtSameLines, p.Content().Text)
 
 		// Top 10
 		//fmt.Println("== START ANALYZE by STYLE")
 		//newPageProcessed.PDFTxtSameStyles = make([]string, 0, 20)
-		extractTxtSameStyles(&newPageProcessed.PDFTxtSameStyles, p.Content().Text)
+		//extractTxtSameStyles(&newPageProcessed.PDFTxtSameStyles, p.Content().Text)
 		//fmt.Println("== END ANALYZE by STYLE")
 
 		// If OK, append them ..
@@ -105,8 +111,65 @@ func NewPDFDocument(pdfPath string, options *ExtractPDFOptions) (*PDFDocument, e
 	}
 
 	// DEBUG
-	litter.Dump(pdfDoc)
+	//litter.Dump(pdfDoc)
 	return &pdfDoc, nil
+}
+
+func extractTxtSameLineWordPosition(pdfContentTxt []pdf.Text) {
+	type WordColumns struct {
+		word      []string
+		startWord int
+	}
+	type CurrentLine struct {
+		lineNo  float64
+		wordCol WordColumns
+	}
+
+	var numValidLineCounted int
+	var currentLineNumber float64
+	var currentContent string
+
+	var pdfTxtSameLine []string
+
+	// DEBUG
+	//spew.Dump(pdfContentTxt)
+
+	for _, v := range pdfContentTxt {
+
+		// Guard function .. what is it?
+		//if strings.TrimSpace(v.S) == "" {
+		//	fmt.Println("Skipping blank line / content ..")
+		//	continue
+		//}
+
+		if currentLineNumber == 0 {
+			currentLineNumber = v.Y
+			// DEBUG
+			//fmt.Println("Set first line to ", currentLineNumber)
+			currentContent += v.S
+			continue
+		}
+
+		// Happy path ,..
+		fmt.Println("Append CONTENT: ", currentContent, " X: ", v.X, " Y: ", v.Y)
+		// number of valid line increase when new valid line ..
+		if currentLineNumber != v.Y {
+			if strings.TrimSpace(currentContent) != "" {
+				// trim new lines ..
+				currentContent = strings.ReplaceAll(currentContent, "\n", "")
+				// DEBUG
+				//fmt.Println("NEW Line ... collected: ", currentContent)
+				pdfTxtSameLine = append(pdfTxtSameLine, currentContent)
+				numValidLineCounted++
+			}
+			currentContent = v.S // reset .. after append
+			currentLineNumber = v.Y
+		} else {
+			// If on the same line, just build up the content ..
+			currentContent += v.S
+		}
+
+	}
 }
 
 func extractTxtSameLine(ptrTxtSameLine *[]string, pdfContentTxt []pdf.Text) error {

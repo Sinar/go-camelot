@@ -12,7 +12,7 @@
 *.out
 
 # Ignore binary
-go-camelot
+gocamelot
 
 # Ignore direnv files
 .envrc*
@@ -25,4 +25,7 @@ testdata
 
 # Ignore raw folder
 raw
+
+# Ignore bin folder
+bin
 
