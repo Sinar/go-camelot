@@ -2,12 +2,13 @@ package camelot
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"gocv.io/x/gocv"
 	"image"
 	"image/color"
 	"math"
 	"os"
+
+	"github.com/davecgh/go-spew/spew"
+	"gocv.io/x/gocv"
 )
 
 // Here is the gocv method
@@ -24,7 +25,6 @@ import (
 //
 // 		go run ./cmd/facedetect/main.go 0 data/haarcascade_frontalface_default.xml
 //
-// +build example
 
 func runExample() {
 	filename := os.Args[1]
@@ -60,4 +60,3 @@ func runExample() {
 		}
 	}
 }
-
